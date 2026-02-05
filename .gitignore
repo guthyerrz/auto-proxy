@@ -1,0 +1,24 @@
+# IDE & OS
+*.iml
+**/.DS_Store
+.claude/
+
+# Android / Gradle
+.gradle/
+.kotlin/
+local.properties
+**/build/
+captures/
+.externalNativeBuild
+.cxx
+
+# Android Studio
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Personal dev certs
+android/app/src/main/assets/charles.pem
