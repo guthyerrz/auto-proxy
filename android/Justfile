@@ -111,3 +111,137 @@ lint-app:
 # List connected devices/emulators
 devices:
     adb devices -l
+
+# --- E2E Proxy Test ---
+
+proxy_confdir  := justfile_directory() / "scripts"
+proxy_ca       := proxy_confdir / "mitmproxy-ca.pem"
+uv_run         := "uv run --project scripts"
+proxy_pid      := "/tmp/mitmproxy.pid"
+ngrok_pid      := "/tmp/ngrok.pid"
+captured_har   := "/tmp/mitmproxy_captured.har"
+proxy_log      := "/tmp/mitmproxy.log"
+tunnel_file    := "/tmp/proxy_tunnel.txt"
+app_apk        := "app/build/outputs/apk/debug/app-debug.apk"
+test_apk       := "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+test_runner    := "com.guthyerrz.autoproxy.test/androidx.test.runner.AndroidJUnitRunner"
+
+[private]
+proxy-gen-ca:
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout /tmp/proxy-ca-key.pem -out /tmp/proxy-ca-cert.pem \
+        -days 365 -subj "/CN=auto-proxy test CA" \
+        -addext "keyUsage=critical,keyCertSign" \
+        -addext "basicConstraints=critical,CA:TRUE"
+    cat /tmp/proxy-ca-key.pem /tmp/proxy-ca-cert.pem > {{ proxy_ca }}
+    rm /tmp/proxy-ca-key.pem /tmp/proxy-ca-cert.pem
+
+# Generate proxy CA cert (if needed) and embed public cert in SDK
+proxy-setup-ca:
+    {{ if path_exists(proxy_ca) == "true" { "" } else { "just proxy-gen-ca" } }}
+    openssl x509 -in {{ proxy_ca }} -out lib/src/main/res/raw/auto_proxy_ca_cert.pem
+    @echo "CA cert embedded in SDK"
+
+# Build app and test APKs
+build-test:
+    {{ gradle }} :app:assembleDebug :app:assembleDebugAndroidTest
+
+# Start mitmproxy with HAR dump (background, writes PID to /tmp)
+proxy-start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -f {{ captured_har }}
+    {{ uv_run }} mitmdump --set confdir="{{ proxy_confdir }}" \
+        --mode regular --listen-port 8080 --ssl-insecure \
+        --set hardump="{{ captured_har }}" > {{ proxy_log }} 2>&1 &
+    echo $! > {{ proxy_pid }}
+    sleep 2
+    echo "mitmproxy started (PID: $(cat {{ proxy_pid }}))"
+
+# Start ngrok tunnel (background, writes host:port to /tmp)
+proxy-tunnel:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ngrok tcp 8080 --log=stdout > /tmp/ngrok.log 2>&1 &
+    echo $! > {{ ngrok_pid }}
+    sleep 5
+    TUNNEL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' | sed 's|tcp://||')
+    echo "$TUNNEL" > {{ tunnel_file }}
+    echo "Tunnel: $TUNNEL"
+
+# Run instrumented test on connected local device/emulator
+test-local proxyHost proxyPort:
+    adb install -r {{ app_apk }}
+    adb install -r {{ test_apk }}
+    adb shell am instrument -w \
+        -e proxyHost {{ proxyHost }} \
+        -e proxyPort {{ proxyPort }} \
+        {{ test_runner }}
+
+# Run instrumented test on Firebase Test Lab
+test-ftl proxyHost proxyPort:
+    gcloud firebase test android run \
+        --type instrumentation \
+        --app {{ app_apk }} \
+        --test {{ test_apk }} \
+        --device model=Pixel6,version=33,locale=en,orientation=portrait \
+        --environment-variables "proxyHost={{ proxyHost }},proxyPort={{ proxyPort }}" \
+        --timeout 5m
+
+# Verify captured requests contain expected Singular call
+verify-proxy:
+    {{ uv_run }} python scripts/verify_captured_requests.py
+
+# Stop background proxy processes (waits for mitmproxy to flush HAR)
+proxy-stop:
+    #!/usr/bin/env bash
+    if [ -f {{ proxy_pid }} ]; then
+        PID=$(cat {{ proxy_pid }})
+        kill "$PID" 2>/dev/null || true
+        while kill -0 "$PID" 2>/dev/null; do sleep 0.1; done
+    fi
+    [ -f {{ ngrok_pid }} ] && kill "$(cat {{ ngrok_pid }})" 2>/dev/null || true
+    rm -f {{ proxy_pid }} {{ ngrok_pid }} {{ tunnel_file }}
+    echo "Proxy stopped"
+
+# Full E2E proxy test: setup -> build -> proxy -> tunnel -> FTL -> verify -> cleanup
+e2e-proxy-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'just proxy-stop' EXIT
+
+    just proxy-setup-ca
+    just build-test
+    just proxy-start
+    just proxy-tunnel
+
+    TUNNEL=$(cat {{ tunnel_file }})
+    echo "Running FTL with proxy: $TUNNEL"
+    just test-ftl "${TUNNEL%%:*}" "${TUNNEL##*:}"
+    just proxy-stop
+    just verify-proxy
+
+# Full E2E proxy test on local device. Pass local IP to skip ngrok tunnel.
+e2e-proxy-test-local ip="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'just proxy-stop' EXIT
+
+    just proxy-setup-ca
+    just build-test
+    just proxy-start
+
+    if [ -n "{{ ip }}" ]; then
+        PROXY_HOST="{{ ip }}"
+        PROXY_PORT=8080
+    else
+        just proxy-tunnel
+        TUNNEL=$(cat {{ tunnel_file }})
+        PROXY_HOST="${TUNNEL%%:*}"
+        PROXY_PORT="${TUNNEL##*:}"
+    fi
+
+    echo "Running local test with proxy: $PROXY_HOST:$PROXY_PORT"
+    just test-local "$PROXY_HOST" "$PROXY_PORT"
+    just proxy-stop
+    just verify-proxy

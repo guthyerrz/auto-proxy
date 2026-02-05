@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+scripts/mitmproxy-ca.pem
+scripts/mitmproxy-ca-cert.pem
+scripts/mitmproxy-dhparam.pem

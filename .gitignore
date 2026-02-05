@@ -22,3 +22,4 @@ captures/
 
 # Personal dev certs
 android/app/src/main/assets/charles.pem
+android/scripts/__pycache__

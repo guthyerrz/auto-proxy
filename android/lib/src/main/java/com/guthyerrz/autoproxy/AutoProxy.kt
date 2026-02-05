@@ -62,7 +62,7 @@ object AutoProxy {
 
     fun getProxy(): Proxy {
         if (!isEnabled) return Proxy.NO_PROXY
-        return Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort))
+        return Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(proxyHost!!, proxyPort))
     }
 
     fun getHostnameVerifier(): HostnameVerifier = HostnameVerifier { _, _ -> true }
@@ -80,7 +80,7 @@ object AutoProxy {
     }
 
     private fun setupProxySelector(host: String, port: Int) {
-        val proxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(host, port))
+        val proxy = Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port))
         ProxySelector.setDefault(object : ProxySelector() {
             override fun select(uri: URI): List<Proxy> {
                 Log.d(TAG, "ProxySelector.select: $uri")
