@@ -1,4 +1,4 @@
-package com.guthy.autoproxy
+package com.guthyerrz.autoproxy
 
 import android.util.Log
 import okhttp3.internal.platform.Platform

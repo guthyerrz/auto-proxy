@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.guthy.autoproxy"
+    namespace = "com.guthyerrz.autoproxy"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.guthy.autoproxy"
+        applicationId = "com.guthyerrz.autoproxy"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

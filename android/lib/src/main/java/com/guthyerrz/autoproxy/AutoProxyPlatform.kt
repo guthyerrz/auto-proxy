@@ -1,4 +1,4 @@
-package com.guthy.autoproxy
+package com.guthyerrz.autoproxy
 
 import okhttp3.internal.platform.Platform
 import javax.net.ssl.SSLSocketFactory

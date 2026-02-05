@@ -4,6 +4,17 @@
 
 Zero-code HTTP/HTTPS proxy injection for debugging and traffic inspection.
 
+## Installation
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("com.guthyerrz:autoproxy:<version>")
+}
+```
+
+Replace `<version>` with the latest release (e.g. `0.1.0`).
+
 ## Getting started (Android)
 
 Add the library module to your project, then launch your app with proxy settings via `adb`:

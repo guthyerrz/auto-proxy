@@ -3,7 +3,7 @@
 
     <application>
         <provider
-            android:name="com.guthy.autoproxy.AutoProxyInitializer"
+            android:name="com.guthyerrz.autoproxy.AutoProxyInitializer"
             android:authorities="${applicationId}.autoproxy-init"
             android:exported="false" />
     </application>

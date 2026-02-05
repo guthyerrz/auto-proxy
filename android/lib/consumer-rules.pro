@@ -1,3 +1,3 @@
 -dontwarn okhttp3.internal.platform.Platform
--keep class com.guthy.autoproxy.AutoProxyPlatform { *; }
--keep class com.guthy.autoproxy.OkHttpPatcher { *; }
+-keep class com.guthyerrz.autoproxy.AutoProxyPlatform { *; }
+-keep class com.guthyerrz.autoproxy.OkHttpPatcher { *; }

@@ -1,4 +1,4 @@
-package com.guthy.autoproxy
+package com.guthyerrz.autoproxy
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.guthy.autoproxy
+package com.guthyerrz.autoproxy
 
 import android.app.Activity
 import android.app.Application

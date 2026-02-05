@@ -1,4 +1,4 @@
-package com.guthy.autoproxy.ui.theme
+package com.guthyerrz.autoproxy.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
