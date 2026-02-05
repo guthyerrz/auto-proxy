@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 23
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -45,7 +45,10 @@ dependencies {
 
 mavenPublishing {
     publishToMavenCentral()
-    signAllPublications()
+
+    if (project.findProperty("sign") != "false") {
+        signAllPublications()
+    }
 
     coordinates("com.guthyerrz", "autoproxy", project.findProperty("VERSION_NAME")?.toString() ?: "0.1.0-SNAPSHOT")
 

@@ -1,0 +1,113 @@
+# Auto Proxy Android SDK
+
+set dotenv-load
+
+gradle := "./gradlew"
+version := `grep '^VERSION_NAME=' gradle.properties | cut -d'=' -f2`
+
+# List available recipes
+default:
+    @just --list
+
+# --- Build ---
+
+# Build the library (debug)
+build:
+    {{ gradle }} :lib:assembleDebug
+
+# Build the library (release)
+build-release:
+    {{ gradle }} :lib:assembleRelease
+
+# Build the sample app (debug)
+build-app:
+    {{ gradle }} :app:assembleDebug
+
+# Build the sample app (release)
+build-app-release:
+    {{ gradle }} :app:assembleRelease
+
+# Build everything
+build-all:
+    {{ gradle }} assemble
+
+# Clean build outputs
+clean:
+    {{ gradle }} clean
+
+# --- Test ---
+
+# Run library unit tests
+test:
+    {{ gradle }} :lib:test
+
+# Run sample app unit tests
+test-app:
+    {{ gradle }} :app:test
+
+# Run all unit tests
+test-all:
+    {{ gradle }} test
+
+# Run library Android instrumented tests (requires running device/emulator)
+test-instrumented:
+    {{ gradle }} :lib:connectedAndroidTest
+
+# Run sample app Android instrumented tests (requires running device/emulator)
+test-instrumented-app:
+    {{ gradle }} :app:connectedAndroidTest
+
+# --- Run ---
+
+# Install and run the sample app on connected device/emulator (debug)
+run: build-app
+    adb install -r app/build/outputs/apk/debug/app-debug.apk
+    adb shell am start -n com.guthyerrz.autoproxy/.MainActivity
+
+# Install the debug APK on connected device/emulator
+install:
+    {{ gradle }} :app:installDebug
+
+# Uninstall the sample app from connected device/emulator
+uninstall:
+    adb uninstall com.guthyerrz.autoproxy || true
+
+# --- Publish ---
+
+# Publish library to Maven Local as SNAPSHOT (~/.m2)
+publish-local:
+    {{ gradle }} :lib:publishToMavenLocal -Psign=false -PVERSION_NAME={{ version }}-SNAPSHOT
+
+# Publish library to Maven Local with exact version (~/.m2)
+publish-local-release:
+    {{ gradle }} :lib:publishToMavenLocal -Psign=false
+
+# Publish library to Maven Central (staging)
+publish:
+    {{ gradle }} :lib:publishToMavenCentral
+
+# Publish library to Maven Central and automatically release
+publish-release:
+    {{ gradle }} :lib:publishAndReleaseToMavenCentral
+
+# --- Utilities ---
+
+# Show available Gradle tasks
+tasks:
+    {{ gradle }} tasks
+
+# Check for dependency updates
+dependencies:
+    {{ gradle }} :lib:dependencies
+
+# Run lint checks on the library
+lint:
+    {{ gradle }} :lib:lint
+
+# Run lint checks on the sample app
+lint-app:
+    {{ gradle }} :app:lint
+
+# List connected devices/emulators
+devices:
+    adb devices -l
