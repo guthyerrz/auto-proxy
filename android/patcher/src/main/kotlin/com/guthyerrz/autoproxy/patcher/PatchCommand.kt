@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
@@ -12,6 +13,7 @@ import com.guthyerrz.autoproxy.patcher.pipeline.ApkSignStep
 import com.guthyerrz.autoproxy.patcher.pipeline.PatcherException
 import com.guthyerrz.autoproxy.patcher.util.Logger
 import java.io.File
+import java.util.logging.Level
 
 class PatchCommand : CliktCommand(name = "patch") {
 
@@ -42,7 +44,15 @@ class PatchCommand : CliktCommand(name = "patch") {
 
     private val keyPass by option("--key-pass", help = "Key password")
 
+    private val quiet by option("-q", "--quiet", help = "Suppress all output except errors")
+        .flag()
+
     override fun run() {
+        if (quiet) {
+            Logger.quiet = true
+            java.util.logging.Logger.getLogger("").level = Level.OFF
+        }
+
         if (host.isEmpty()) {
             throw PatcherException("--host is required")
         }

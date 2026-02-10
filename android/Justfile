@@ -154,9 +154,9 @@ install-patcher: build-patcher
     chmod +x "$DEST/auto-proxy"
     echo "Installed: $DEST/auto-proxy"
 
-# Generate injectable smali files from the lib build output
-generate-smali:
-    {{ gradle }} :patcher:generateSmali
+# Generate SDK dex from the lib build output
+generate-sdk-dex:
+    {{ gradle }} :patcher:generateSdkDex
 
 # --- E2E Proxy Test ---
 

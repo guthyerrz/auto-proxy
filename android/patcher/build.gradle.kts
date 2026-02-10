@@ -22,7 +22,6 @@ kotlin {
 dependencies {
     implementation(libs.clikt)
     implementation(libs.apktool.lib)
-    implementation(libs.smali.baksmali)
     implementation(libs.apksig)
 
     testImplementation(libs.junit5)
@@ -36,17 +35,15 @@ tasks.shadowJar {
     archiveBaseName.set("auto-proxy-patcher")
     archiveClassifier.set("")
     archiveVersion.set("")
-    dependsOn("generateSmali")
-    from("src/main/resources") // pick up smali files generated after processResources
+    dependsOn("generateSdkDex")
+    from("src/main/resources") // pick up sdk.dex generated after processResources
 }
 
-// --- Smali generation task ---
+// --- SDK dex generation task ---
 
-val generateSmaliCp = sourceSets["main"].runtimeClasspath
-
-tasks.register("generateSmali") {
-    description = "Generate SDK smali from lib module (build AAR → d8 → baksmali)"
-    dependsOn(":lib:assembleRelease", "classes")
+tasks.register("generateSdkDex") {
+    description = "Generate SDK dex from lib module (build AAR → d8)"
+    dependsOn(":lib:assembleRelease")
 
     doLast {
         // Locate d8 from Android SDK
@@ -65,8 +62,8 @@ tasks.register("generateSmali") {
         val aar = rootProject.file("lib/build/outputs/aar/lib-release.aar")
         require(aar.exists()) { "AAR not found: ${aar.absolutePath}" }
 
-        val workDir = project.layout.buildDirectory.dir("generate-smali").get().asFile
-        val smaliOut = project.file("src/main/resources/smali/com/guthyerrz/autoproxy")
+        val workDir = project.layout.buildDirectory.dir("generate-sdk-dex").get().asFile
+        val dexOut = project.file("src/main/resources/sdk.dex")
 
         workDir.deleteRecursively()
         workDir.mkdirs()
@@ -84,34 +81,10 @@ tasks.register("generateSmali") {
             .start()
             .also { require(it.waitFor() == 0) { "d8 failed with exit code ${it.exitValue()}" } }
 
-        // 3. Baksmali: DEX → smali (uses google/smali via apktool-lib transitive dep)
-        val cp = generateSmaliCp.asPath
-        ProcessBuilder(
-            "java", "-cp", cp,
-            "com.guthyerrz.autoproxy.patcher.tools.SmaliGeneratorKt",
-            "${workDir}/classes.dex", "${workDir}/smali"
-        )
-            .inheritIO()
-            .start()
-            .also { require(it.waitFor() == 0) { "Baksmali failed with exit code ${it.exitValue()}" } }
-
-        // 4. Copy SDK smali to patcher resources
-        smaliOut.deleteRecursively()
-        smaliOut.mkdirs()
-
-        val sourceDir = File(workDir, "smali/com/guthyerrz/autoproxy")
-        require(sourceDir.exists() && sourceDir.isDirectory) {
-            "Expected baksmali output at ${sourceDir.absolutePath}"
-        }
-
-        project.copy {
-            from(sourceDir)
-            include("*.smali")
-            into(smaliOut)
-        }
-
-        val generated = smaliOut.listFiles()?.filter { it.extension == "smali" }?.sorted() ?: emptyList()
-        println("Generated ${generated.size} smali files:")
-        generated.forEach { println("  ${it.name}") }
+        // 3. Copy classes.dex as sdk.dex to patcher resources
+        val generatedDex = File(workDir, "classes.dex")
+        require(generatedDex.exists()) { "d8 did not produce classes.dex" }
+        generatedDex.copyTo(dexOut, overwrite = true)
+        println("Generated sdk.dex (${dexOut.length()} bytes)")
     }
 }

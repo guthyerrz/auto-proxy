@@ -13,7 +13,6 @@ material = "1.13.0"
 mavenPublish = "0.36.0"
 clikt = "5.0.3"
 apktool = "2.10.0"
-smali = "3.0.8"
 apksig = "8.7.3"
 shadow = "8.3.5"
 junit5 = "5.11.4"
@@ -38,7 +37,6 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 clikt = { group = "com.github.ajalt.clikt", name = "clikt", version.ref = "clikt" }
 apktool-lib = { group = "org.apktool", name = "apktool-lib", version.ref = "apktool" }
-smali-baksmali = { group = "com.android.tools.smali", name = "smali-baksmali", version.ref = "smali" }
 apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "apksig" }
 junit5 = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
 

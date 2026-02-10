@@ -8,62 +8,31 @@ import java.io.File
 class SmaliInjectorTest {
 
     @Test
-    fun `injects smali files into decoded directory`(@TempDir tempDir: File) {
+    fun `injects SDK as new dex file`(@TempDir tempDir: File) {
+        File(tempDir, "classes.dex").writeBytes(byteArrayOf())
+
         SmaliInjector.execute(tempDir)
 
-        val smaliDir = File(tempDir, "smali/com/guthyerrz/autoproxy")
-        assertTrue(smaliDir.exists())
-        assertTrue(smaliDir.isDirectory)
-
-        // Core classes that must always exist (inner class names may vary by compiler)
-        val requiredFiles = listOf(
-            "AutoProxy.smali",
-            "AutoProxyInitializer.smali",
-            "OkHttpPatcher.smali",
-            "AutoProxyPlatform.smali",
-        )
-
-        for (fileName in requiredFiles) {
-            val file = File(smaliDir, fileName)
-            assertTrue(file.exists(), "Expected file $fileName to exist")
-            assertTrue(file.length() > 0, "Expected file $fileName to be non-empty")
-        }
-
-        // Should also have inner class / lambda smali files
-        val allSmali = smaliDir.listFiles()?.filter { it.extension == "smali" } ?: emptyList()
-        assertTrue(allSmali.size >= requiredFiles.size, "Expected at least ${requiredFiles.size} smali files, got ${allSmali.size}")
+        val sdkDex = File(tempDir, "classes2.dex")
+        assertTrue(sdkDex.exists(), "Expected classes2.dex to be created")
+        assertTrue(sdkDex.length() > 0, "Expected classes2.dex to be non-empty")
     }
 
     @Test
-    fun `detects already injected SDK`(@TempDir tempDir: File) {
+    fun `uses next available dex slot`(@TempDir tempDir: File) {
+        File(tempDir, "classes.dex").writeBytes(byteArrayOf())
+        File(tempDir, "classes2.dex").writeBytes(byteArrayOf())
+        File(tempDir, "classes3.dex").writeBytes(byteArrayOf())
+
         SmaliInjector.execute(tempDir)
 
+        assertTrue(File(tempDir, "classes4.dex").exists(), "Expected classes4.dex to be created")
+    }
+
+    @Test
+    fun `fails without classes dex`(@TempDir tempDir: File) {
         assertThrows(PatcherException::class.java) {
             SmaliInjector.execute(tempDir)
         }
-    }
-
-    @Test
-    fun `AutoProxy smali reads cert from assets instead of R raw`(@TempDir tempDir: File) {
-        SmaliInjector.execute(tempDir)
-
-        val autoProxySmali = File(tempDir, "smali/com/guthyerrz/autoproxy/AutoProxy.smali")
-        val content = autoProxySmali.readText()
-
-        assertTrue(content.contains("auto_proxy/ca_cert.pem"), "Should reference asset path for cert")
-        assertFalse(content.contains("R\$raw"), "Should not reference R.raw")
-    }
-
-    @Test
-    fun `AutoProxyInitializer smali includes config properties fallback`(@TempDir tempDir: File) {
-        SmaliInjector.execute(tempDir)
-
-        val initSmali = File(tempDir, "smali/com/guthyerrz/autoproxy/AutoProxyInitializer.smali")
-        val content = initSmali.readText()
-
-        assertTrue(
-            content.contains("auto_proxy/config.properties"),
-            "Should reference config.properties asset path",
-        )
     }
 }

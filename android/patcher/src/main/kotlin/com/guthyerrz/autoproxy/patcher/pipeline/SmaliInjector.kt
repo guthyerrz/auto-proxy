@@ -2,74 +2,43 @@ package com.guthyerrz.autoproxy.patcher.pipeline
 
 import com.guthyerrz.autoproxy.patcher.util.Logger
 import java.io.File
-import java.net.URI
-import java.util.jar.JarFile
 
 object SmaliInjector {
 
-    private const val SMALI_RESOURCE_DIR = "smali/com/guthyerrz/autoproxy"
-    private const val TARGET_SMALI_DIR = "smali/com/guthyerrz/autoproxy"
+    private const val SDK_DEX_RESOURCE = "sdk.dex"
 
+    /**
+     * Injects the SDK as a new dex file alongside the existing raw dex files.
+     * Copies the pre-built sdk.dex from classpath resources into the decoded APK directory.
+     */
     fun execute(decodedDir: File) {
-        Logger.step("Injecting SDK smali files")
+        Logger.step("Injecting SDK dex")
 
-        val targetDir = File(decodedDir, TARGET_SMALI_DIR)
-        if (targetDir.exists() && targetDir.list()?.isNotEmpty() == true) {
-            throw PatcherException(
-                "SDK smali already exists at ${targetDir.absolutePath}. " +
-                    "The APK may already be patched."
-            )
-        }
-        targetDir.mkdirs()
-
-        val smaliFiles = discoverSmaliFiles()
-        if (smaliFiles.isEmpty()) {
-            throw PatcherException("No smali files found in $SMALI_RESOURCE_DIR")
+        val existingDex = File(decodedDir, "classes.dex")
+        if (!existingDex.exists()) {
+            throw PatcherException("No classes.dex found in decoded APK")
         }
 
-        var injected = 0
-        for (smaliFile in smaliFiles) {
-            val resourcePath = "$SMALI_RESOURCE_DIR/$smaliFile"
-            val inputStream = javaClass.classLoader.getResourceAsStream(resourcePath)
-                ?: throw PatcherException("Missing embedded smali resource: $resourcePath")
+        val nextDexNumber = findNextDexNumber(decodedDir)
+        val sdkDexFile = File(decodedDir, "classes${nextDexNumber}.dex")
 
-            val outFile = File(targetDir, smaliFile)
-            inputStream.use { input ->
-                outFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+        val sdkDex = javaClass.classLoader.getResourceAsStream(SDK_DEX_RESOURCE)
+            ?: throw PatcherException("Embedded SDK dex not found: $SDK_DEX_RESOURCE")
+
+        sdkDex.use { input ->
+            sdkDexFile.outputStream().use { output ->
+                input.copyTo(output)
             }
-            injected++
         }
 
-        Logger.info("Injected $injected smali files into primary dex")
+        Logger.info("Injected SDK as ${sdkDexFile.name}")
     }
 
-    private fun discoverSmaliFiles(): List<String> {
-        val url = javaClass.classLoader.getResource(SMALI_RESOURCE_DIR)
-            ?: throw PatcherException("Smali resource directory not found: $SMALI_RESOURCE_DIR")
-
-        return when (url.protocol) {
-            "jar" -> {
-                val jarPath = url.path.substringBefore("!")
-                val jarFile = JarFile(File(URI(jarPath)))
-                jarFile.use {
-                    it.entries().asSequence()
-                        .map { entry -> entry.name }
-                        .filter { name ->
-                            name.startsWith("$SMALI_RESOURCE_DIR/") && name.endsWith(".smali")
-                        }
-                        .map { name -> name.substringAfterLast("/") }
-                        .toList()
-                }
-            }
-            "file" -> {
-                File(url.toURI()).listFiles()
-                    ?.filter { it.extension == "smali" }
-                    ?.map { it.name }
-                    ?: emptyList()
-            }
-            else -> throw PatcherException("Unsupported resource protocol: ${url.protocol}")
+    private fun findNextDexNumber(decodedDir: File): Int {
+        var n = 2
+        while (File(decodedDir, "classes${n}.dex").exists()) {
+            n++
         }
+        return n
     }
 }
