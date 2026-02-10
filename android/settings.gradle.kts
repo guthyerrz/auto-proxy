@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "Auto Proxy"
 include(":app")
 include(":lib")
+include(":patcher")

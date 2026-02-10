@@ -39,10 +39,22 @@ android {
     buildFeatures {
         compose = true
     }
+
+    flavorDimensions += "sdk"
+    productFlavors {
+        create("full") {
+            dimension = "sdk"
+            isDefault = true
+        }
+        create("noProxy") {
+            dimension = "sdk"
+            applicationIdSuffix = ".noproxy"
+        }
+    }
 }
 
 dependencies {
-    implementation(project(":lib"))
+    "fullImplementation"(project(":lib"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

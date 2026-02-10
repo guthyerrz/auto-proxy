@@ -23,6 +23,7 @@ import javax.net.ssl.X509TrustManager
 object AutoProxy {
 
     private const val TAG = "AutoProxy"
+    private const val DEFAULT_CERT_ASSET = "auto_proxy/ca_cert.pem"
 
     var isEnabled: Boolean = false
         private set
@@ -101,7 +102,7 @@ object AutoProxy {
             val certInput: InputStream = if (certAssetPath != null) {
                 context.assets.open(certAssetPath)
             } else {
-                context.resources.openRawResource(R.raw.auto_proxy_ca_cert)
+                context.assets.open(DEFAULT_CERT_ASSET)
             }
 
             val caCert = certInput.use { cf.generateCertificate(it) }

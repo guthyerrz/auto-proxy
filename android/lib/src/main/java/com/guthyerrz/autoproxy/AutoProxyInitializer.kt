@@ -21,6 +21,7 @@ class AutoProxyInitializer : ContentProvider() {
         const val PREF_HOST = "auto_proxy_host"
         const val PREF_PORT = "auto_proxy_port"
         const val PREF_CERT = "auto_proxy_cert"
+        private const val CONFIG_ASSET_PATH = "auto_proxy/config.properties"
     }
 
     override fun onCreate(): Boolean {
@@ -45,6 +46,20 @@ class AutoProxyInitializer : ContentProvider() {
                     host = prefs.getString(PREF_HOST, null)
                     port = prefs.getInt(PREF_PORT, 0)
                     certPath = prefs.getString(PREF_CERT, null)
+                }
+
+                // Fall back to bundled asset config (used by patcher-injected APKs)
+                if (host == null) {
+                    try {
+                        val props = java.util.Properties()
+                        activity.applicationContext.assets.open(CONFIG_ASSET_PATH).use {
+                            props.load(it)
+                        }
+                        host = props.getProperty("host")
+                        port = props.getProperty("port", "0").toIntOrNull() ?: 0
+                    } catch (_: Exception) {
+                        // No asset config available
+                    }
                 }
 
                 if (host == null) return
