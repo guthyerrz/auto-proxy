@@ -120,7 +120,7 @@ devices:
 
 # Build the patcher fat JAR
 build-patcher:
-    {{ gradle }} :patcher:shadowJar
+    {{ gradle }} :patcher:generateSmali :patcher:shadowJar
 
 # Run patcher unit tests
 test-patcher:
