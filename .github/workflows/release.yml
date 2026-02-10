@@ -46,7 +46,7 @@ jobs:
         run: ./gradlew :patcher:shadowJar
 
       - name: Generate checksum
-        run: sha256sum patcher/build/libs/auto-proxy-patcher.jar > patcher/build/libs/auto-proxy-patcher.jar.sha256
+        run: cd patcher/build/libs && sha256sum auto-proxy-patcher.jar > auto-proxy-patcher.jar.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
