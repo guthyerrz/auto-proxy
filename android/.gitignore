@@ -17,5 +17,5 @@ scripts/mitmproxy-ca.pem
 scripts/mitmproxy-ca-cert.pem
 scripts/mitmproxy-dhparam.pem
 
-# Generated smali files (regenerated via: just generate-smali)
-patcher/src/main/resources/smali/
+# Generated SDK dex (regenerated via: just generate-sdk-dex)
+patcher/src/main/resources/sdk.dex
