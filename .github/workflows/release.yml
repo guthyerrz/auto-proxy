@@ -42,8 +42,17 @@ jobs:
       - name: Build release AAR
         run: ./gradlew :lib:assembleRelease
 
+      - name: Build patcher shadow JAR
+        run: ./gradlew :patcher:shadowJar
+
+      - name: Generate checksum
+        run: sha256sum patcher/build/libs/auto-proxy-patcher.jar > patcher/build/libs/auto-proxy-patcher.jar.sha256
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: android/lib/build/outputs/aar/lib-release.aar
+          files: |
+            android/lib/build/outputs/aar/lib-release.aar
+            android/patcher/build/libs/auto-proxy-patcher.jar
+            android/patcher/build/libs/auto-proxy-patcher.jar.sha256

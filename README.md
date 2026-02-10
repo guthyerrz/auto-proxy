@@ -34,6 +34,38 @@ adb shell am start -n com.your.app/.MainActivity
 
 No code changes required in your app — the library initializes automatically via a `ContentProvider`.
 
+## APK Patcher CLI
+
+Patch any compiled APK to route traffic through a proxy — no source code needed.
+
+### Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/guthyerrz/auto-proxy/main/install.sh | bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/guthyerrz/auto-proxy/main/install.sh | bash -s 0.1.0
+```
+
+Requires Java 11+.
+
+### Usage
+
+```bash
+auto-proxy patch <input.apk> --host <proxy-host> --port <proxy-port> [--cert ca.pem] [-o output.apk]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--host` | Proxy host address (required) |
+| `--port` | Proxy port number (required) |
+| `--cert` | CA certificate PEM file (optional) |
+| `-o, --output` | Output path (default: `<input>-patched.apk`) |
+| `--keystore` | Custom signing keystore |
+
 ## How it works
 
 The `:lib` module ships a `ContentProvider` (`AutoProxyInitializer`) that runs before your first `Activity`. On the first `onActivityCreated` callback it reads proxy configuration from:

@@ -19,13 +19,17 @@ build:
 build-release:
     {{ gradle }} :lib:assembleRelease
 
-# Build the sample app (debug)
+# Build the sample app (full flavor, debug)
 build-app:
-    {{ gradle }} :app:assembleDebug
+    {{ gradle }} :app:assembleFullDebug
 
-# Build the sample app (release)
+# Build the sample app (full flavor, release)
 build-app-release:
-    {{ gradle }} :app:assembleRelease
+    {{ gradle }} :app:assembleFullRelease
+
+# Build the sample app without proxy SDK (noProxy flavor, debug)
+build-noproxy:
+    {{ gradle }} :app:assembleNoProxyDebug
 
 # Build everything
 build-all:
@@ -61,12 +65,12 @@ test-instrumented-app:
 
 # Install and run the sample app on connected device/emulator (debug)
 run: build-app
-    adb install -r app/build/outputs/apk/debug/app-debug.apk
+    adb install -r app/build/outputs/apk/full/debug/app-full-debug.apk
     adb shell am start -n com.guthyerrz.autoproxy/.MainActivity
 
 # Install the debug APK on connected device/emulator
 install:
-    {{ gradle }} :app:installDebug
+    {{ gradle }} :app:installFullDebug
 
 # Uninstall the sample app from connected device/emulator
 uninstall:
@@ -112,6 +116,48 @@ lint-app:
 devices:
     adb devices -l
 
+# --- Patcher ---
+
+# Build the patcher fat JAR
+build-patcher:
+    {{ gradle }} :patcher:shadowJar
+
+# Run patcher unit tests
+test-patcher:
+    {{ gradle }} :patcher:test
+
+# Run the patcher CLI (pass args after --)
+run-patcher *args:
+    {{ gradle }} :patcher:run --args='{{ args }}'
+
+# Patch an APK (convenience wrapper)
+patch-apk apk host port cert="" output="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just build-patcher
+    ARGS="patch {{ apk }} --host {{ host }} --port {{ port }}"
+    [ -n "{{ cert }}" ] && ARGS="$ARGS --cert {{ cert }}"
+    [ -n "{{ output }}" ] && ARGS="$ARGS -o {{ output }}"
+    java -jar patcher/build/libs/auto-proxy-patcher.jar $ARGS
+
+# Install patcher CLI to ~/.local/bin (builds from source)
+install-patcher: build-patcher
+    #!/usr/bin/env bash
+    set -euo pipefail
+    DEST="${HOME}/.local/bin"
+    mkdir -p "$DEST"
+    cp patcher/build/libs/auto-proxy-patcher.jar "$DEST/"
+    cat > "$DEST/auto-proxy" << 'SCRIPT'
+    #!/usr/bin/env bash
+    exec java -jar "$(dirname "$0")/auto-proxy-patcher.jar" "$@"
+    SCRIPT
+    chmod +x "$DEST/auto-proxy"
+    echo "Installed: $DEST/auto-proxy"
+
+# Generate injectable smali files from the lib build output
+generate-smali:
+    {{ gradle }} :patcher:generateSmali
+
 # --- E2E Proxy Test ---
 
 proxy_confdir  := justfile_directory() / "scripts"
@@ -122,9 +168,12 @@ ngrok_pid      := "/tmp/ngrok.pid"
 captured_har   := "/tmp/mitmproxy_captured.har"
 proxy_log      := "/tmp/mitmproxy.log"
 tunnel_file    := "/tmp/proxy_tunnel.txt"
-app_apk        := "app/build/outputs/apk/debug/app-debug.apk"
-test_apk       := "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+app_apk        := "app/build/outputs/apk/full/debug/app-full-debug.apk"
+test_apk       := "app/build/outputs/apk/androidTest/full/debug/app-full-debug-androidTest.apk"
 test_runner    := "com.guthyerrz.autoproxy.test/androidx.test.runner.AndroidJUnitRunner"
+noproxy_apk    := "app/build/outputs/apk/noProxy/debug/app-noProxy-debug.apk"
+patcher_jar    := "patcher/build/libs/auto-proxy-patcher.jar"
+patched_apk    := "/tmp/patched-noproxy.apk"
 
 [private]
 proxy-gen-ca:
@@ -139,12 +188,12 @@ proxy-gen-ca:
 # Generate proxy CA cert (if needed) and embed public cert in SDK
 proxy-setup-ca:
     {{ if path_exists(proxy_ca) == "true" { "" } else { "just proxy-gen-ca" } }}
-    openssl x509 -in {{ proxy_ca }} -out lib/src/main/res/raw/auto_proxy_ca_cert.pem
+    openssl x509 -in {{ proxy_ca }} -out lib/src/main/assets/auto_proxy/ca_cert.pem
     @echo "CA cert embedded in SDK"
 
-# Build app and test APKs
+# Build app and test APKs (full flavor)
 build-test:
-    {{ gradle }} :app:assembleDebug :app:assembleDebugAndroidTest
+    {{ gradle }} :app:assembleFullDebug :app:assembleFullDebugAndroidTest
 
 # Start mitmproxy with HAR dump (background, writes PID to /tmp)
 proxy-start:
@@ -243,5 +292,40 @@ e2e-proxy-test-local ip="":
 
     echo "Running local test with proxy: $PROXY_HOST:$PROXY_PORT"
     just test-local "$PROXY_HOST" "$PROXY_PORT"
+    just proxy-stop
+    just verify-proxy
+
+# --- E2E Patcher Test ---
+
+# Full E2E patcher test on local device: build noProxy APK, patch it, install, verify proxy capture.
+e2e-patcher-test-local ip:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'just proxy-stop' EXIT
+
+    just proxy-setup-ca
+    echo "Building noProxy APK and patcher..."
+    {{ gradle }} :app:assembleNoProxyDebug :patcher:shadowJar
+
+    just proxy-start
+
+    PROXY_HOST="{{ ip }}"
+    PROXY_PORT=8080
+
+    echo "Patching APK with proxy $PROXY_HOST:$PROXY_PORT..."
+    java -jar {{ patcher_jar }} patch {{ noproxy_apk }} \
+        --host "$PROXY_HOST" --port "$PROXY_PORT" \
+        --cert {{ proxy_ca }} \
+        -o {{ patched_apk }}
+
+    echo "Installing patched APK..."
+    adb uninstall com.guthyerrz.autoproxy.noproxy 2>/dev/null || true
+    adb install {{ patched_apk }}
+
+    echo "Launching app..."
+    adb shell am start -n com.guthyerrz.autoproxy.noproxy/com.guthyerrz.autoproxy.MainActivity
+    sleep 10
+
+    echo "Stopping proxy and verifying..."
     just proxy-stop
     just verify-proxy

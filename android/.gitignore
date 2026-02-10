@@ -16,3 +16,6 @@ local.properties
 scripts/mitmproxy-ca.pem
 scripts/mitmproxy-ca-cert.pem
 scripts/mitmproxy-dhparam.pem
+
+# Generated smali files (regenerated via: just generate-smali)
+patcher/src/main/resources/smali/
