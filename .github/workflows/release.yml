@@ -43,7 +43,7 @@ jobs:
         run: ./gradlew :lib:assembleRelease
 
       - name: Build patcher shadow JAR
-        run: ./gradlew :patcher:generateSmali :patcher:shadowJar
+        run: ./gradlew :patcher:shadowJar
 
       - name: Generate checksum
         run: cd patcher/build/libs && sha256sum auto-proxy-patcher.jar > auto-proxy-patcher.jar.sha256

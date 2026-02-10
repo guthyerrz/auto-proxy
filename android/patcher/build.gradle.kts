@@ -36,6 +36,8 @@ tasks.shadowJar {
     archiveBaseName.set("auto-proxy-patcher")
     archiveClassifier.set("")
     archiveVersion.set("")
+    dependsOn("generateSmali")
+    from("src/main/resources") // pick up smali files generated after processResources
 }
 
 // --- Smali generation task ---
