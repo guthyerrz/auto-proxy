@@ -21,11 +21,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Install tools
-        run: |
-          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok-v3-stable-linux-amd64.tgz \
-            | sudo tar xz -C /usr/local/bin
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      - name: Install ngrok
+        uses: ngrok/ngrok-setup@v1
+      - name: Configure ngrok
+        run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
         working-directory: .
 
       - uses: google-github-actions/auth@v2
