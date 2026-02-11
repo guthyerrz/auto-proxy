@@ -17,5 +17,6 @@ scripts/mitmproxy-ca.pem
 scripts/mitmproxy-ca-cert.pem
 scripts/mitmproxy-dhparam.pem
 
-# Generated SDK dex (regenerated via: just generate-sdk-dex)
+# Generated dex files (regenerated during build)
 patcher/src/main/resources/sdk.dex
+patcher/src/main/resources/kotlin-stdlib.dex
