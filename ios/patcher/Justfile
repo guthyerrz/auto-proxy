@@ -1,0 +1,28 @@
+# iOS Auto Proxy Patcher — Justfile
+
+default:
+    @just --list
+
+# Build the patcher (debug)
+build:
+    swift build
+
+# Build the patcher (release)
+build-release:
+    swift build -c release
+
+# Run unit tests
+test:
+    swift test
+
+# Clean build artifacts
+clean:
+    swift package clean
+
+# Run the patcher CLI (pass args after --)
+run *args:
+    swift run auto-proxy-patcher {{args}}
+
+# Resolve package dependencies
+resolve:
+    swift package resolve

@@ -20,6 +20,9 @@ captures/
 .idea/navEditor.xml
 .idea/assetWizardSettings.xml
 
+# Swift Package Manager
+.build/
+
 # iOS / CocoaPods / Xcode
 ios/Example/Pods/
 ios/Example/*.xcworkspace
