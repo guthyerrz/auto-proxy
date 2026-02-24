@@ -78,9 +78,60 @@ run-device device_id host port cert_path team_id="ARU5M8XF67":
         -auto_proxy_port {{port}} \
         -auto_proxy_cert "${CERT_B64}"
 
+# Build AutoProxy.framework (arm64 Release) for patcher embedding
+build-framework:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{justfile_directory()}}/Example
+    xcodegen generate
+    pod install
+    xcodebuild build -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxy \
+        -configuration Release \
+        -sdk iphoneos -arch arm64 \
+        BUILD_LIBRARY_FOR_DISTRIBUTION=YES SKIP_INSTALL=NO \
+        -quiet
+    FW_PATH=$(xcodebuild -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxy -configuration Release -sdk iphoneos \
+        -showBuildSettings 2>/dev/null \
+        | grep -m1 " BUILT_PRODUCTS_DIR" | awk '{print $3}')/AutoProxy.framework
+    DEST="{{justfile_directory()}}/patcher/Sources/AutoProxyPatcher/Resources/AutoProxy.framework"
+    rm -rf "$DEST"
+    cp -R "$FW_PATH" "$DEST"
+    echo "Copied framework to $DEST"
+
+# Build the patcher CLI
+build-patcher:
+    cd {{justfile_directory()}}/patcher && swift build -c release
+
+# Run patcher unit tests
+test-patcher:
+    cd {{justfile_directory()}}/patcher && swift test
+
+# Patch an IPA (convenience wrapper)
+patch-ipa ipa host port cert identity profile output="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{justfile_directory()}}/patcher
+    swift build -c release --quiet
+    PATCHER=".build/release/auto-proxy-patcher"
+    ARGS="patch {{ipa}} --host {{host}} --port {{port}} --cert {{cert}} --identity '{{identity}}' --profile {{profile}}"
+    [ -n "{{output}}" ] && ARGS="$ARGS -o {{output}}"
+    eval "$PATCHER $ARGS"
+
+# Install patcher CLI to ~/.local/bin
+install-patcher: build-patcher
+    #!/usr/bin/env bash
+    set -euo pipefail
+    DEST="${HOME}/.local/bin"
+    mkdir -p "$DEST"
+    cp "{{justfile_directory()}}/patcher/.build/release/auto-proxy-patcher" "$DEST/"
+    echo "Installed: $DEST/auto-proxy-patcher"
+
 # Clean build artifacts
 clean:
     cd {{justfile_directory()}}/Example && xcodebuild clean -workspace AutoProxyExample.xcworkspace -scheme AutoProxyExample 2>/dev/null || true
     rm -rf {{justfile_directory()}}/Example/Pods
     rm -rf {{justfile_directory()}}/Example/*.xcworkspace
     rm -rf {{justfile_directory()}}/Example/*.xcodeproj
+    cd {{justfile_directory()}}/patcher && swift package clean 2>/dev/null || true

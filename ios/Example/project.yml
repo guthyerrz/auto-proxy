@@ -31,3 +31,11 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.guthyerrz.autoproxy.tests
       GENERATE_INFOPLIST_FILE: YES
+  PatcherTestApp:
+    type: application
+    platform: iOS
+    sources:
+      - PatcherTestSources
+    settings:
+      INFOPLIST_FILE: PatcherTestSources/Info.plist
+      PRODUCT_BUNDLE_IDENTIFIER: com.guthyerrz.autoproxy.patchertest

@@ -40,20 +40,33 @@ import Security
     // MARK: - Public API
 
     @objc public func loadConfig() {
+        // Priority 1: UserDefaults / launch arguments (can override at runtime)
         let defaults = UserDefaults.standard
-        guard let host = defaults.string(forKey: Self.hostKey), !host.isEmpty else {
-            NSLog("[AutoProxy] No proxy host configured, skipping initialization")
+        if let host = defaults.string(forKey: Self.hostKey), !host.isEmpty {
+            let port = defaults.integer(forKey: Self.portKey)
+            guard port > 0 else {
+                NSLog("[AutoProxy] Invalid or missing proxy port, skipping initialization")
+                return
+            }
+            let certBase64 = defaults.string(forKey: Self.certKey)
+            enable(host: host, port: port, certBase64: certBase64)
             return
         }
 
-        let port = defaults.integer(forKey: Self.portKey)
-        guard port > 0 else {
-            NSLog("[AutoProxy] Invalid or missing proxy port, skipping initialization")
+        // Priority 2: Embedded proxy_config.plist (baked in by patcher)
+        if let config = loadEmbeddedConfig() {
+            let host = config["ProxyHost"] as? String ?? ""
+            let port = config["ProxyPort"] as? Int ?? 0
+            guard !host.isEmpty, port > 0 else {
+                NSLog("[AutoProxy] Embedded proxy_config.plist has invalid host/port")
+                return
+            }
+            NSLog("[AutoProxy] Using embedded proxy config: %@:%d", host, port)
+            enable(host: host, port: port, certBase64: nil)
             return
         }
 
-        let certBase64 = defaults.string(forKey: Self.certKey)
-        enable(host: host, port: port, certBase64: certBase64)
+        NSLog("[AutoProxy] No proxy host configured, skipping initialization")
     }
 
     public func enable(host: String, port: Int, certBase64: String? = nil) {
@@ -141,6 +154,22 @@ import Security
         }
 
         NSLog("[AutoProxy] No embedded CA certificate found")
+        return nil
+    }
+
+    private func loadEmbeddedConfig() -> [String: Any]? {
+        // Look for proxy_config.plist in the resource bundle (injected by the patcher)
+        let candidates = [
+            resourceBundle?.url(forResource: "proxy_config", withExtension: "plist"),
+            Bundle(for: AutoProxy.self).url(forResource: "proxy_config", withExtension: "plist"),
+        ]
+
+        for case let url? in candidates {
+            if let data = try? Data(contentsOf: url),
+               let config = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] {
+                return config
+            }
+        }
         return nil
     }
 
