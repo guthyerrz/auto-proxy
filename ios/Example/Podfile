@@ -1,0 +1,11 @@
+platform :ios, '15.0'
+
+target 'AutoProxyExample' do
+  use_frameworks!
+  pod 'AutoProxy', :path => '../'
+end
+
+target 'AutoProxyTests' do
+  use_frameworks!
+  pod 'AutoProxy', :path => '../'
+end

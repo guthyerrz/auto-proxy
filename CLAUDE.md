@@ -11,7 +11,7 @@ Each SDK lives in its own top-level directory with its own build system, tests, 
 | Platform | Directory | Status |
 |----------|-----------|--------|
 | Android  | [`android/`](android/CLAUDE.md) | Active |
-| iOS      | `ios/` | Planned |
+| iOS      | [`ios/`](ios/CLAUDE.md) | Active |
 | Flutter  | `flutter/` | Planned |
 
 ## How It Works (Cross-Platform Concept)

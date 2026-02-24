@@ -1,0 +1,86 @@
+# iOS Auto Proxy SDK — Justfile
+
+default:
+    @just --list
+
+# Generate Xcode project and install pods
+setup:
+    cd {{justfile_directory()}}/Example && xcodegen generate && pod install
+
+# Lint the podspec
+lint:
+    cd {{justfile_directory()}} && pod lib lint AutoProxy.podspec --allow-warnings
+
+# Build the example app
+build-example:
+    cd {{justfile_directory()}}/Example && xcodegen generate && pod install && \
+    xcodebuild -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxyExample \
+        -sdk iphonesimulator \
+        -destination 'generic/platform=iOS Simulator' \
+        build
+
+# Run unit tests via the example workspace
+test:
+    cd {{justfile_directory()}}/Example && \
+    xcodebuild test -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxyExample \
+        -sdk iphonesimulator \
+        -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+        -only-testing:AutoProxyTests
+
+# Build + test everything
+build: build-example
+
+test-all: test
+
+bundle_id := "com.guthyerrz.autoproxy.example"
+
+# Build example app for a real device
+build-device device_id team_id:
+    cd {{justfile_directory()}}/Example && \
+    xcodebuild build -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxyExample \
+        -destination 'generic/platform=iOS' \
+        -allowProvisioningUpdates \
+        CODE_SIGN_IDENTITY="Apple Development" \
+        DEVELOPMENT_TEAM={{team_id}} \
+        CODE_SIGN_STYLE=Automatic
+
+# Install and launch on device with proxy settings
+run-device device_id host port cert_path team_id="ARU5M8XF67":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{justfile_directory()}}/Example
+    echo "==> Building for device..."
+    xcodebuild build -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxyExample \
+        -destination 'generic/platform=iOS' \
+        -allowProvisioningUpdates \
+        CODE_SIGN_IDENTITY="Apple Development" \
+        DEVELOPMENT_TEAM={{team_id}} \
+        CODE_SIGN_STYLE=Automatic \
+        -quiet
+    APP_PATH=$(xcodebuild -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxyExample \
+        -destination 'generic/platform=iOS' \
+        -showBuildSettings 2>/dev/null \
+        | grep -m1 " BUILT_PRODUCTS_DIR" | awk '{print $3}')/AutoProxyExample.app
+    echo "==> Installing ${APP_PATH}..."
+    xcrun devicectl device install app --device {{device_id}} "${APP_PATH}"
+    CERT_B64=$(grep -v "BEGIN\|END" "{{cert_path}}" | tr -d '\n')
+    echo "==> Launching with proxy {{host}}:{{port}}..."
+    xcrun devicectl device process launch \
+        --device {{device_id}} \
+        {{bundle_id}} \
+        -- \
+        -auto_proxy_host {{host}} \
+        -auto_proxy_port {{port}} \
+        -auto_proxy_cert "${CERT_B64}"
+
+# Clean build artifacts
+clean:
+    cd {{justfile_directory()}}/Example && xcodebuild clean -workspace AutoProxyExample.xcworkspace -scheme AutoProxyExample 2>/dev/null || true
+    rm -rf {{justfile_directory()}}/Example/Pods
+    rm -rf {{justfile_directory()}}/Example/*.xcworkspace
+    rm -rf {{justfile_directory()}}/Example/*.xcodeproj

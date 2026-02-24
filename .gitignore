@@ -20,6 +20,18 @@ captures/
 .idea/navEditor.xml
 .idea/assetWizardSettings.xml
 
+# iOS / CocoaPods / Xcode
+ios/Example/Pods/
+ios/Example/*.xcworkspace
+ios/Example/*.xcodeproj
+ios/Example/Podfile.lock
+xcuserdata/
+DerivedData/
+
 # Personal dev certs
 android/app/src/main/assets/charles.pem
 android/scripts/__pycache__
+ios/Example/logs
+ios/logs
+logs
+
