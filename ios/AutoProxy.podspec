@@ -16,6 +16,7 @@ Pod::Spec.new do |s|
   s.swift_version = '5.9'
 
   s.source_files = 'Sources/AutoProxy/**/*.{swift,h,m}'
+  s.public_header_files = 'Sources/AutoProxy/include/**/*.h'
   s.resource_bundles = { 'AutoProxy' => ['Sources/AutoProxy/Resources/**/*'] }
 
   s.frameworks = 'Foundation', 'Security'
