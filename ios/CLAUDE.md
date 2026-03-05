@@ -73,7 +73,10 @@ Four Swift files + one ObjC auto-loader:
 
 **Priority order** (first match wins):
 1. `UserDefaults.standard` / launch arguments (can override at runtime)
-2. Embedded `proxy_config.plist` (baked into the framework bundle by the patcher)
+2. App `Info.plist` keys (injected by external tools like apptk `--plist-entry`)
+3. Embedded `proxy_config.plist` (baked into the framework bundle by the patcher)
+
+**Launch arguments / UserDefaults (Priority 1):**
 
 | Launch Arg | UserDefaults Key | Type | Description |
 |---|---|---|---|
@@ -81,7 +84,15 @@ Four Swift files + one ObjC auto-loader:
 | `-auto_proxy_port` | `auto_proxy_port` | Int | Proxy port |
 | `-auto_proxy_cert` | `auto_proxy_cert` | String | Base64-encoded DER certificate |
 
-If no cert is provided via launch args, the SDK falls back to the embedded `ca_cert.pem` (mitmproxy CA).
+**Info.plist keys (Priority 2):**
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `AutoProxyHost` | String | Yes | Proxy hostname/IP |
+| `AutoProxyPort` | Number (Int) | Yes | Proxy port |
+| `AutoProxyCert` | String | No | Base64-encoded PEM/DER certificate |
+
+If no cert is provided via any config source, the SDK falls back to the embedded `ca_cert.pem` (mitmproxy CA).
 
 ### IPA Patcher (`patcher/`)
 

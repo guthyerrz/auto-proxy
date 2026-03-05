@@ -3,8 +3,10 @@ import Security
 
 /// Zero-code HTTP/HTTPS proxy injection for iOS apps.
 ///
-/// Reads proxy configuration from UserDefaults (which automatically picks up launch arguments):
-///   -auto_proxy_host <host>  -auto_proxy_port <port>  -auto_proxy_cert <base64-DER>
+/// Reads proxy configuration from (in priority order):
+///   1. UserDefaults / launch arguments: -auto_proxy_host <host>  -auto_proxy_port <port>  -auto_proxy_cert <base64-DER>
+///   2. App Info.plist keys: AutoProxyHost, AutoProxyPort, AutoProxyCert
+///   3. Embedded proxy_config.plist (baked in by patcher)
 @objc public final class APProxy: NSObject {
     @objc public static let shared = APProxy()
 
@@ -53,7 +55,16 @@ import Security
             return
         }
 
-        // Priority 2: Embedded proxy_config.plist (baked in by patcher)
+        // Priority 2: App Info.plist (injected by external tools)
+        if let info = Bundle.main.infoDictionary,
+           let host = info["AutoProxyHost"] as? String, !host.isEmpty,
+           let port = info["AutoProxyPort"] as? Int, port > 0 {
+            NSLog("[AutoProxy] Using Info.plist proxy config: %@:%d", host, port)
+            enable(host: host, port: port, certBase64: info["AutoProxyCert"] as? String)
+            return
+        }
+
+        // Priority 3: Embedded proxy_config.plist (baked in by patcher)
         if let config = loadEmbeddedConfig() {
             let host = config["ProxyHost"] as? String ?? ""
             let port = config["ProxyPort"] as? Int ?? 0
