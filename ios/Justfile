@@ -78,6 +78,46 @@ run-device device_id host port cert_path team_id="ARU5M8XF67":
         -auto_proxy_port {{port}} \
         -auto_proxy_cert "${CERT_B64}"
 
+# Build AutoProxy.xcframework (device + simulator) for distribution
+build-xcframework:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{justfile_directory()}}/Example
+    xcodegen generate
+    pod install
+
+    ARCHIVE_DIR="{{justfile_directory()}}/.build/xcframework-archives"
+    OUTPUT_DIR="{{justfile_directory()}}/.build/xcframework"
+    rm -rf "$ARCHIVE_DIR" "$OUTPUT_DIR"
+    mkdir -p "$ARCHIVE_DIR" "$OUTPUT_DIR"
+
+    echo "==> Archiving for iOS device..."
+    xcodebuild archive -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxy \
+        -configuration Release \
+        -destination 'generic/platform=iOS' \
+        -archivePath "$ARCHIVE_DIR/ios-device.xcarchive" \
+        BUILD_LIBRARY_FOR_DISTRIBUTION=YES SKIP_INSTALL=NO \
+        -quiet
+
+    echo "==> Archiving for iOS Simulator..."
+    xcodebuild archive -workspace AutoProxyExample.xcworkspace \
+        -scheme AutoProxy \
+        -configuration Release \
+        -destination 'generic/platform=iOS Simulator' \
+        -archivePath "$ARCHIVE_DIR/ios-simulator.xcarchive" \
+        BUILD_LIBRARY_FOR_DISTRIBUTION=YES SKIP_INSTALL=NO \
+        -quiet
+
+    echo "==> Creating XCFramework..."
+    xcodebuild -create-xcframework \
+        -framework "$ARCHIVE_DIR/ios-device.xcarchive/Products/Library/Frameworks/AutoProxy.framework" \
+        -framework "$ARCHIVE_DIR/ios-simulator.xcarchive/Products/Library/Frameworks/AutoProxy.framework" \
+        -output "$OUTPUT_DIR/AutoProxy.xcframework"
+
+    rm -rf "$ARCHIVE_DIR"
+    echo "Built: $OUTPUT_DIR/AutoProxy.xcframework"
+
 # Build AutoProxy.framework (arm64 Release) for patcher embedding
 build-framework:
     #!/usr/bin/env bash
@@ -103,6 +143,17 @@ build-framework:
 # Build the patcher CLI
 build-patcher:
     cd {{justfile_directory()}}/patcher && swift build -c release
+
+# Build the patcher CLI as a universal binary (arm64 + x86_64)
+build-patcher-universal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{justfile_directory()}}/patcher
+    swift build -c release --arch arm64 --arch x86_64
+    DEST="{{justfile_directory()}}/.build"
+    mkdir -p "$DEST"
+    cp .build/apple/Products/Release/auto-proxy-patcher "$DEST/auto-proxy-ios-patcher"
+    echo "Built: $DEST/auto-proxy-ios-patcher"
 
 # Run patcher unit tests
 test-patcher:
