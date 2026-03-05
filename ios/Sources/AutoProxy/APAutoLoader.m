@@ -10,7 +10,7 @@
 
 + (void)load {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [[AutoProxy shared] loadConfig];
+        [[APProxy shared] loadConfig];
     });
 }
 

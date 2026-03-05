@@ -11,7 +11,7 @@ class AutoProxyURLProtocol: URLProtocol {
     // MARK: - URLProtocol overrides
 
     override class func canInit(with request: URLRequest) -> Bool {
-        guard AutoProxy.shared.isEnabled else { return false }
+        guard APProxy.shared.isEnabled else { return false }
         guard property(forKey: handledKey, in: request) == nil else { return false }
         guard let scheme = request.url?.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else { return false }
@@ -29,7 +29,7 @@ class AutoProxyURLProtocol: URLProtocol {
         // Build an ephemeral config with the proxy dictionary but WITHOUT our protocol class
         // to prevent infinite recursion.
         let config = URLSessionConfiguration.ephemeral
-        config.connectionProxyDictionary = AutoProxy.shared.proxyDictionary
+        config.connectionProxyDictionary = APProxy.shared.proxyDictionary
         config.protocolClasses = []
 
         let delegate = ProxySessionDelegate(protocolClient: client, urlProtocol: self)

@@ -6,68 +6,68 @@ final class AutoProxyTests: XCTestCase {
     override func setUp() {
         super.setUp()
         // Reset state between tests
-        AutoProxy.shared.disable()
+        APProxy.shared.disable()
     }
 
     // MARK: - Config loading
 
     func testLoadConfigFromUserDefaults() {
         let defaults = UserDefaults.standard
-        defaults.set("192.168.1.100", forKey: AutoProxy.hostKey)
-        defaults.set(8080, forKey: AutoProxy.portKey)
+        defaults.set("192.168.1.100", forKey: APProxy.hostKey)
+        defaults.set(8080, forKey: APProxy.portKey)
 
-        AutoProxy.shared.loadConfig()
+        APProxy.shared.loadConfig()
 
-        XCTAssertTrue(AutoProxy.shared.isEnabled)
-        XCTAssertEqual(AutoProxy.shared.proxyHost, "192.168.1.100")
-        XCTAssertEqual(AutoProxy.shared.proxyPort, 8080)
+        XCTAssertTrue(APProxy.shared.isEnabled)
+        XCTAssertEqual(APProxy.shared.proxyHost, "192.168.1.100")
+        XCTAssertEqual(APProxy.shared.proxyPort, 8080)
 
-        defaults.removeObject(forKey: AutoProxy.hostKey)
-        defaults.removeObject(forKey: AutoProxy.portKey)
+        defaults.removeObject(forKey: APProxy.hostKey)
+        defaults.removeObject(forKey: APProxy.portKey)
     }
 
     func testLoadConfigSkipsWhenNoHost() {
         let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: AutoProxy.hostKey)
-        defaults.removeObject(forKey: AutoProxy.portKey)
+        defaults.removeObject(forKey: APProxy.hostKey)
+        defaults.removeObject(forKey: APProxy.portKey)
 
-        AutoProxy.shared.loadConfig()
+        APProxy.shared.loadConfig()
 
-        XCTAssertFalse(AutoProxy.shared.isEnabled)
-        XCTAssertNil(AutoProxy.shared.proxyHost)
+        XCTAssertFalse(APProxy.shared.isEnabled)
+        XCTAssertNil(APProxy.shared.proxyHost)
     }
 
     func testLoadConfigSkipsWhenNoPort() {
         let defaults = UserDefaults.standard
-        defaults.set("10.0.0.1", forKey: AutoProxy.hostKey)
-        defaults.removeObject(forKey: AutoProxy.portKey)
+        defaults.set("10.0.0.1", forKey: APProxy.hostKey)
+        defaults.removeObject(forKey: APProxy.portKey)
 
-        AutoProxy.shared.loadConfig()
+        APProxy.shared.loadConfig()
 
-        XCTAssertFalse(AutoProxy.shared.isEnabled)
+        XCTAssertFalse(APProxy.shared.isEnabled)
 
-        defaults.removeObject(forKey: AutoProxy.hostKey)
+        defaults.removeObject(forKey: APProxy.hostKey)
     }
 
     // MARK: - Enable / Disable
 
     func testEnableAndDisable() {
-        AutoProxy.shared.enable(host: "127.0.0.1", port: 9090)
+        APProxy.shared.enable(host: "127.0.0.1", port: 9090)
 
-        XCTAssertTrue(AutoProxy.shared.isEnabled)
-        XCTAssertEqual(AutoProxy.shared.proxyHost, "127.0.0.1")
-        XCTAssertEqual(AutoProxy.shared.proxyPort, 9090)
+        XCTAssertTrue(APProxy.shared.isEnabled)
+        XCTAssertEqual(APProxy.shared.proxyHost, "127.0.0.1")
+        XCTAssertEqual(APProxy.shared.proxyPort, 9090)
 
-        AutoProxy.shared.disable()
-        XCTAssertFalse(AutoProxy.shared.isEnabled)
+        APProxy.shared.disable()
+        XCTAssertFalse(APProxy.shared.isEnabled)
     }
 
     // MARK: - Proxy dictionary
 
     func testProxyDictionary() {
-        AutoProxy.shared.enable(host: "10.0.0.1", port: 3128)
+        APProxy.shared.enable(host: "10.0.0.1", port: 3128)
 
-        let dict = AutoProxy.shared.proxyDictionary
+        let dict = APProxy.shared.proxyDictionary
 
         XCTAssertEqual(dict[kCFNetworkProxiesHTTPEnable as String] as? Bool, true)
         XCTAssertEqual(dict[kCFNetworkProxiesHTTPProxy as String] as? String, "10.0.0.1")
@@ -78,7 +78,7 @@ final class AutoProxyTests: XCTestCase {
     }
 
     func testProxyDictionaryEmptyWhenDisabled() {
-        let dict = AutoProxy.shared.proxyDictionary
+        let dict = APProxy.shared.proxyDictionary
         XCTAssertTrue(dict.isEmpty)
     }
 
@@ -93,12 +93,12 @@ final class AutoProxyTests: XCTestCase {
             return
         }
 
-        let cert = AutoProxy.shared.decodeCertificate(base64: pem)
+        let cert = APProxy.shared.decodeCertificate(base64: pem)
         XCTAssertNotNil(cert, "Should decode PEM certificate")
     }
 
     func testDecodeCertificateReturnsNilForGarbage() {
-        let cert = AutoProxy.shared.decodeCertificate(base64: "not-valid-base64!!!")
+        let cert = APProxy.shared.decodeCertificate(base64: "not-valid-base64!!!")
         XCTAssertNil(cert)
     }
 
@@ -109,7 +109,7 @@ final class AutoProxyTests: XCTestCase {
         -----END CERTIFICATE-----
         """
         // This won't be a valid cert, but it should at least try to decode the base64
-        let cert = AutoProxy.shared.decodeCertificate(base64: pem)
+        let cert = APProxy.shared.decodeCertificate(base64: pem)
         // The DER data won't form a valid cert, so this returns nil, but it shouldn't crash
         XCTAssertNil(cert) // incomplete cert data
     }
@@ -122,13 +122,13 @@ final class AutoProxyTests: XCTestCase {
     }
 
     func testCanInitReturnsTrueWhenEnabled() {
-        AutoProxy.shared.enable(host: "127.0.0.1", port: 8080)
+        APProxy.shared.enable(host: "127.0.0.1", port: 8080)
         let request = URLRequest(url: URL(string: "https://example.com")!)
         XCTAssertTrue(AutoProxyURLProtocol.canInit(with: request))
     }
 
     func testCanInitReturnsFalseForTaggedRequest() {
-        AutoProxy.shared.enable(host: "127.0.0.1", port: 8080)
+        APProxy.shared.enable(host: "127.0.0.1", port: 8080)
 
         let mutable = NSMutableURLRequest(url: URL(string: "https://example.com")!)
         URLProtocol.setProperty(true, forKey: AutoProxyURLProtocol.handledKey, in: mutable)
@@ -137,7 +137,7 @@ final class AutoProxyTests: XCTestCase {
     }
 
     func testCanInitReturnsFalseForNonHTTP() {
-        AutoProxy.shared.enable(host: "127.0.0.1", port: 8080)
+        APProxy.shared.enable(host: "127.0.0.1", port: 8080)
         let request = URLRequest(url: URL(string: "ftp://example.com/file")!)
         XCTAssertFalse(AutoProxyURLProtocol.canInit(with: request))
     }
@@ -145,7 +145,7 @@ final class AutoProxyTests: XCTestCase {
     // MARK: - Embedded cert loading
 
     func testLoadEmbeddedCert() {
-        let cert = AutoProxy.shared.loadEmbeddedCert()
+        let cert = APProxy.shared.loadEmbeddedCert()
         // May or may not find the cert depending on bundle setup in tests
         // This primarily verifies the method doesn't crash
         if cert != nil {
@@ -157,7 +157,7 @@ final class AutoProxyTests: XCTestCase {
 
     private func loadEmbeddedPEM() -> String? {
         // Try to find the embedded cert in the test bundle or resource bundle
-        let bundle = Bundle(for: AutoProxy.self)
+        let bundle = Bundle(for: APProxy.self)
         let candidates = [
             bundle.url(forResource: "ca_cert", withExtension: "pem"),
             bundle.url(forResource: "AutoProxy", withExtension: "bundle")

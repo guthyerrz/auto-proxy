@@ -59,7 +59,7 @@ xcodebuild test -workspace AutoProxyExample.xcworkspace \
 
 Four Swift files + one ObjC auto-loader:
 
-- **AutoProxy** — Singleton that manages proxy config (host, port, CA certificate). Reads settings from `UserDefaults` (which automatically picks up launch arguments), with fallback to embedded `proxy_config.plist` (baked in by the patcher). Registers the custom `URLProtocol` and triggers swizzling when enabled.
+- **APProxy** — Singleton (`APProxy.shared`) that manages proxy config (host, port, CA certificate). Reads settings from `UserDefaults` (which automatically picks up launch arguments), with fallback to embedded `proxy_config.plist` (baked in by the patcher). Registers the custom `URLProtocol` and triggers swizzling when enabled. Named with `AP` prefix to avoid shadowing the `AutoProxy` module name.
 
 - **AutoProxyURLProtocol** — Custom `URLProtocol` that intercepts HTTP/HTTPS requests and routes them through the proxy. Tags requests to prevent recursion. Internal sessions use `protocolClasses = []` to bypass interception.
 
@@ -67,7 +67,7 @@ Four Swift files + one ObjC auto-loader:
 
 - **URLSessionConfigurationSwizzle** — Swizzles `URLSessionConfiguration.default` and `.ephemeral` to inject `AutoProxyURLProtocol` into `protocolClasses` of every new session.
 
-- **APAutoLoader** (ObjC) — Uses `+load` to trigger `AutoProxy.shared.loadConfig()` on the main queue before any app code runs.
+- **APAutoLoader** (ObjC) — Uses `+load` to trigger `APProxy.shared.loadConfig()` on the main queue before any app code runs.
 
 ### Configuration
 

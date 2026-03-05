@@ -26,7 +26,7 @@ class ProxySessionDelegate: NSObject, URLSessionDataDelegate {
         }
 
         // Add the proxy CA as a trusted anchor alongside system CAs
-        if let proxyCert = AutoProxy.shared.proxyCertificate {
+        if let proxyCert = APProxy.shared.proxyCertificate {
             SecTrustSetAnchorCertificates(serverTrust, [proxyCert] as CFArray)
             SecTrustSetAnchorCertificatesOnly(serverTrust, false)
         }

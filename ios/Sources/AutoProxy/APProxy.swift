@@ -5,8 +5,8 @@ import Security
 ///
 /// Reads proxy configuration from UserDefaults (which automatically picks up launch arguments):
 ///   -auto_proxy_host <host>  -auto_proxy_port <port>  -auto_proxy_cert <base64-DER>
-@objc public final class AutoProxy: NSObject {
-    @objc public static let shared = AutoProxy()
+@objc public final class APProxy: NSObject {
+    @objc public static let shared = APProxy()
 
     public private(set) var isEnabled = false
     public private(set) var proxyHost: String?
@@ -139,8 +139,8 @@ import Security
     func loadEmbeddedCert() -> SecCertificate? {
         // Look in the resource bundle shipped with the pod
         let candidates = [
-            Bundle(for: AutoProxy.self).url(forResource: "ca_cert", withExtension: "pem", subdirectory: nil),
-            Bundle(for: AutoProxy.self).url(forResource: "ca_cert", withExtension: "pem"),
+            Bundle(for: APProxy.self).url(forResource: "ca_cert", withExtension: "pem", subdirectory: nil),
+            Bundle(for: APProxy.self).url(forResource: "ca_cert", withExtension: "pem"),
             resourceBundle?.url(forResource: "ca_cert", withExtension: "pem"),
         ]
 
@@ -161,7 +161,7 @@ import Security
         // Look for proxy_config.plist in the resource bundle (injected by the patcher)
         let candidates = [
             resourceBundle?.url(forResource: "proxy_config", withExtension: "plist"),
-            Bundle(for: AutoProxy.self).url(forResource: "proxy_config", withExtension: "plist"),
+            Bundle(for: APProxy.self).url(forResource: "proxy_config", withExtension: "plist"),
         ]
 
         for case let url? in candidates {
@@ -174,9 +174,13 @@ import Security
     }
 
     private var resourceBundle: Bundle? {
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
         // CocoaPods resource bundles are named after the pod
-        guard let url = Bundle(for: AutoProxy.self)
+        guard let url = Bundle(for: APProxy.self)
             .url(forResource: "AutoProxy", withExtension: "bundle") else { return nil }
         return Bundle(url: url)
+        #endif
     }
 }

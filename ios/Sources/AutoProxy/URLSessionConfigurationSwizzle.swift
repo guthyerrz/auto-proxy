@@ -44,7 +44,7 @@ extension URLSessionConfiguration {
     }
 
     private func injectAutoProxyProtocol() {
-        guard AutoProxy.shared.isEnabled else { return }
+        guard APProxy.shared.isEnabled else { return }
 
         var classes = protocolClasses ?? []
         if !classes.contains(where: { $0 == AutoProxyURLProtocol.self }) {

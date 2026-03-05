@@ -14,7 +14,7 @@ class ViewController: UIViewController {
         updateStatus()
         NotificationCenter.default.addObserver(
             self, selector: #selector(updateStatus),
-            name: AutoProxy.configDidChangeNotification, object: nil)
+            name: APProxy.configDidChangeNotification, object: nil)
     }
 
     private func setupUI() {
@@ -81,7 +81,7 @@ class ViewController: UIViewController {
     }
 
     @objc private func updateStatus() {
-        let proxy = AutoProxy.shared
+        let proxy = APProxy.shared
         var lines = [String]()
 
         lines.append("Enabled:  \(proxy.isEnabled ? "YES" : "NO")")
